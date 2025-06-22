@@ -11,7 +11,7 @@ import { createRoot } from "react-dom/client";
 import { MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 
-// Type assertion for import.meta.glob
+// Type assertion for import.meta.globbbb
 const pages = import.meta.glob("../pages/**/*.tsx", { eager: true });
 
 createInertiaApp({
