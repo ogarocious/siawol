@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SIAWOL CSV to TypeScript Converter</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: #1a1a1a;
+            color: #f5f5f5;
+        }
+        .container { 
+            background: #2a2a2a; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 20px 0;
+        }
+        input[type="file"] { 
+            margin: 20px 0; 
+            padding: 10px;
+            background: #3a3a3a;
+            color: #f5f5f5;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+        }
+        button {
+            background: linear-gradient(45deg, #ffeb3b, #ffc107);
+            color: #171717;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: linear-gradient(45deg, #ffc107, #b87333);
+        }
+        textarea { 
+            width: 100%; 
+            height: 500px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px;
+            background: #171717;
+            color: #f5f5f5;
+            border: 1px solid #4a4a4a;
+            padding: 10px;
+        }
+        .stats {
+            background: #3a3a3a;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        h1 {
+            background: linear-gradient(45deg, #ffeb3b, #ffc107);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+</head>
+<body>
+    <h1>SIAWOL CSV to TypeScript Converter</h1>
+    
+    <div class="container">
+        <h3>Step 1: Upload your CSV file</h3>
+        <input type="file" id="csvFile" accept=".csv" />
+        <button onclick="processCSV()">Convert to TypeScript</button>
+    </div>
+
+    <div class="container">
+        <h3>Conversion Stats</h3>
+        <div id="stats" class="stats">
+            Upload your CSV file to see conversion statistics...
+        </div>
+    </div>
+
+    <div class="container">
+        <h3>Generated TypeScript Code</h3>
+        <p>Copy this code and paste it into your <code>app/frontend/data/movies.ts</code> file:</p>
+        <textarea id="output" placeholder="Generated TypeScript code will appear here..."></textarea>
+        <br>
+        <button onclick="copyToClipboard()">Copy to Clipboard</button>
+        <button onclick="downloadFile()">Download as movies.ts</button>
+    </div>
+
+    <script>
+        const countryToFlag = {
+            'United States': '🇺🇸', 'United Kingdom': '🇬🇧', 'Canada': '🇨🇦',
+            'Australia': '🇦🇺', 'China (Hong Kong)': '🇭🇰', 'France': '🇫🇷',
+            'West Germany': '🇩🇪', 'East Germany': '🇩🇪', 'Italy': '🇮🇹',
+            'Soviet Union': '🇷🇺', 'Poland': '🇵🇱', 'Czechoslovakia': '🇨🇿',
+            'Hungary': '🇭🇺', 'Romania': '🇷🇴', 'Bulgaria': '🇧🇬',
+            'Slovenia': '🇸🇮', 'Croatia': '🇭🇷', 'Serbia and Montenegro': '🇷🇸',
+            'Yugoslavia': '🇷🇸', 'Bosnia and Herzegovina': '🇧🇦',
+            'Switzerland': '🇨🇭', 'Austria': '🇦🇹', 'Uzbekistan': '🇺🇿'
+        };
+
+        function getCountryFlag(countryString) {
+            if (!countryString) return '🌍';
+            const firstCountry = countryString.split(',')[0].trim();
+            return countryToFlag[firstCountry] || '🌍';
+        }
+
+        function cleanYear(yearStr, decade) {
+            let year = parseInt(yearStr);
+            if (isNaN(year) || year < 1800 || year > 2025) {
+                if (decade) {
+                    const match = decade.match(/(\d{4})/);
+                    if (match) year = parseInt(match[1]);
+                    else year = 2000;
+                } else year = 2000;
+            }
+            return year;
+        }
+
+        function escapeString(str) {
+            if (!str) return '';
+            return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '');
+        }
+
+        function processCSV() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a CSV file first!');
+                return;
+            }
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const movies = results.data.map(movie => {
+                        const firstCountry = movie.Country ? movie.Country.split(',')[0].trim() : '';
+                        const year = cleanYear(movie.Year, movie.Decade);
+                        
+                        return {
+                            title: escapeString(movie.Title || ''),
+                            englishOtherTitles: escapeString(movie['English/Other Titles'] || ''),
+                            type: escapeString(movie.Type || 'Film'),
+                            length: escapeString(movie.Length || ''),
+                            genre: escapeString(movie.Genre || 'Sci-Fi'),
+                            subgenre: escapeString(movie.Subgenre || ''),
+                            continent: escapeString(movie.Continent || ''),
+                            country: escapeString(firstCountry),
+                            countryFlag: getCountryFlag(firstCountry),
+                            decade: escapeString(movie.Decade || ''),
+                            year: year,
+                            language: escapeString(movie.Language || ''),
+                            director: escapeString(movie.Director || ''),
+                            broadThemes: escapeString(movie['Broad Themes'] || ''),
+                            specificThemes: escapeString(movie['Specific Themes'] || ''),
+                            synopsis: escapeString(movie.Synopsis || ''),
+                            additionalInfo: escapeString(movie['Additional Info'] || ''),
+                            onlineLocation: escapeString(movie['Online Location'] || ''),
+                            notes: escapeString(movie.Notes || ''),
+                            socialMediaPost: escapeString(movie['Social Media Post'] || ''),
+                            attachments: escapeString(movie.Attachments || '')
+                        };
+                    }).filter(movie => movie.title && movie.title.trim() !== '');
+
+                    generateTypeScript(movies);
+                },
+                error: function(error) {
+                    alert('Error parsing CSV: ' + error.message);
+                }
+            });
+        }
+
+        function generateTypeScript(movies) {
+            let tsCode = `// app/frontend/data/movies.ts
+import { Movie } from './movieTypes';
+
+export const movies: Movie[] = [\n`;
+
+            movies.forEach((movie, index) => {
+                tsCode += '  {\n';
+                tsCode += `    title: "${movie.title}",\n`;
+                tsCode += `    englishOtherTitles: "${movie.englishOtherTitles}",\n`;
+                tsCode += `    type: "${movie.type}",\n`;
+                tsCode += `    length: "${movie.length}",\n`;
+                tsCode += `    genre: "${movie.genre}",\n`;
+                tsCode += `    subgenre: "${movie.subgenre}",\n`;
+                tsCode += `    continent: "${movie.continent}",\n`;
+                tsCode += `    country: "${movie.country}",\n`;
+                tsCode += `    countryFlag: "${movie.countryFlag}",\n`;
+                tsCode += `    decade: "${movie.decade}",\n`;
+                tsCode += `    year: ${movie.year},\n`;
+                tsCode += `    language: "${movie.language}",\n`;
+                tsCode += `    director: "${movie.director}",\n`;
+                tsCode += `    broadThemes: "${movie.broadThemes}",\n`;
+                tsCode += `    specificThemes: "${movie.specificThemes}",\n`;
+                tsCode += `    synopsis: "${movie.synopsis}",\n`;
+                tsCode += `    additionalInfo: "${movie.additionalInfo}",\n`;
+                tsCode += `    onlineLocation: "${movie.onlineLocation}",\n`;
+                tsCode += `    notes: "${movie.notes}",\n`;
+                tsCode += `    socialMediaPost: "${movie.socialMediaPost}",\n`;
+                tsCode += `    attachments: "${movie.attachments}"\n`;
+                tsCode += index < movies.length - 1 ? '  },\n' : '  }\n';
+            });
+
+            tsCode += `];
+
+// Export for compatibility with existing code
+export { movies as testMovies };
+export type { Movie };`;
+
+            document.getElementById('output').value = tsCode;
+            
+            const years = movies.map(m => m.year).filter(y => !isNaN(y));
+            const minYear = Math.min(...years);
+            const maxYear = Math.max(...years);
+            
+            document.getElementById('stats').innerHTML = `
+                <strong>Conversion Complete!</strong><br>
+                Total Movies: ${movies.length}<br>
+                Year Range: ${minYear} - ${maxYear}<br>
+                Countries: ${[...new Set(movies.map(m => m.country))].length}<br>
+                Genres: ${[...new Set(movies.map(m => m.genre))].filter(g => g).length}
+            `;
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('output');
+            output.select();
+            document.execCommand('copy');
+            alert('Code copied to clipboard!');
+        }
+
+        function downloadFile() {
+            const content = document.getElementById('output').value;
+            const blob = new Blob([content], { type: 'text/typescript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'movies.ts';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
